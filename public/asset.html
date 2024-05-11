@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AssetExercise</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+  </head>
+  <body>
+    <style>
+      .addFiles {
+        display: flex;
+        width: 100%;
+        align-items: center;
+      }
+      .input,
+      .createBtn {
+        padding: 12px;
+      }
+      .input {
+        flex-grow: 1;
+        flex-shrink: 1;
+        width: 0;
+      }
+      .createBtn {
+        width: 140px;
+        flex-grow: 0;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .sideMenu {
+        width: 250px;
+        height: 100vh;
+        flex-grow: 0;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .display {
+        display: flex;
+        height: 100vh;
+        width: 100%;
+      }
+      #content {
+        flex-grow: 1;
+      }
+      #editor {
+        height: 100%;
+        flex-grow: 1;
+        flex-shrink: 1;
+      }
+      .sideMenu {
+        display: flex;
+        flex-direction: column;
+      }
+      .files {
+        display: flex;
+        cursor: pointer;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background-color: rgb(233, 233, 233);
+        margin-bottom: 10px;
+        height: 40px;
+      }
+      .icon {
+        font-size: 30px;
+        cursor: pointer;
+      }
+    </style>
+    <div class="addFiles">
+      <input type="text" class="input" placeholder="File Name" />
+      <button class="createBtn">Create File</button>
+    </div>
+    <div class="display">
+      <div class="sideMenu"></div>
+      <div id="content">
+        <div id="editor"></div>
+      </div>
+    </div>
+
+    <script>
+      window.onload = function () {
+        let selectedFileName = null;
+        const editor = ace.edit("editor");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/text");
+
+        const input = document.querySelector(".input");
+        const createBtn = document.querySelector(".createBtn");
+
+        input.addEventListener("click", () => {
+          editor.setValue("");
+          selectedFileName = null;
+        });
+
+        createBtn.addEventListener("click", () => {
+          const fileName = input.value.trim();
+          const content = editor.getValue();
+
+          if (selectedFileName) {
+            // Update existing file
+            fetch(`/api/files/${selectedFileName}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ content }),
+            })
+              .then((resp) => resp.json())
+              .then((data) => {
+                console.log("File updated:", data);
+              })
+              .catch((err) => {
+                console.error("Failed to update file", err);
+              });
+          } else if (fileName) {
+            // Create new file
+            fetch("/api/files", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ name: fileName, content }),
+            })
+              .then((resp) => resp.json())
+              .then((data) => {
+                loadFiles();
+                input.value = "";
+                editor.setValue("");
+                selectedFileName = null;
+              })
+              .catch((err) => {
+                return console.error("Failed to create file", err);
+              });
+          }
+        });
+
+        loadFiles();
+
+        function loadFiles() {
+          fetch("/api/files")
+            .then((resp) => resp.json())
+            .then((files) => {
+              console.log("Loaded files:", files);
+              handleFileTimeout(files);
+              const sideMenu = document.querySelector(".sideMenu");
+              sideMenu.innerHTML = "";
+              files.forEach((file) => {
+                const fileDiv = document.createElement("div");
+                fileDiv.classList.add("files");
+                fileDiv.innerHTML = `<a class="fileName">${file}</a><p class="icon" download="${file}.txt">🧐</p>`;
+
+                sideMenu.appendChild(fileDiv);
+
+                const icon = fileDiv.querySelector(".icon");
+                icon.addEventListener("mouseenter", function () {
+                  this.textContent = "🤩";
+                });
+                icon.addEventListener("mouseleave", function () {
+                  this.textContent = "🧐";
+                });
+                icon.addEventListener("click", function () {
+                  downloadFile(file);
+                });
+
+                fileDiv.addEventListener("click", function () {
+                  loadFileContent(file);
+                });
+              });
+            });
+        }
+
+        function downloadFile(fileName) {
+          fetch(`/api/files/${fileName}`)
+            .then((res) => res.text())
+            .then((content) => {
+              const blob = new Blob([content], {
+                type: "text/plain;charset=utf-8",
+              });
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${fileName}.txt`;
+              link.click();
+              window.URL.revokeObjectURL(url);
+            })
+            .catch((err) => console.error("Error downloading file", err));
+        }
+
+        function loadFileContent(fileName) {
+          selectedFileName = fileName;
+          fetch(`/api/files/${fileName}`)
+            .then((res) => res.text())
+            .then((content) => {
+              editor.setValue(content, 1);
+            })
+            .catch((err) => console.error("Error loading file", err));
+        }
+
+        function deleteFile(fileName) {
+          fetch(`/api/files/${fileName}`, {
+            method: "DELETE",
+          })
+            .then((resp) => resp.json())
+            .then((data) => {
+              console.log(data.message);
+              loadFiles();
+            })
+            .catch((err) => console.error("Error deleting file:", err));
+        }
+
+        function handleFileTimeout(files) {
+          files.forEach((fileName, index) => {
+            if (!fileName) {
+              console.error("Invalid filename for timeout deletion.");
+              return;
+            }
+            if (index >= 1) {
+              setTimeout(() => {
+                deleteFile(fileName);
+              }, 200000);
+            }
+          });
+        }
+      };
+    </script>
+  </body>
+</html>
