@@ -4,6 +4,7 @@ const app = express();
 const fs = require("fs").promises;
 const { v4: uuidv4 } = require("uuid");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const allowedOrigins = [
   "http://localhost:3200",
@@ -28,7 +29,6 @@ app.use(cors(corsOptions));
 app.use(express.static("public"));
 app.use(express.json());
 app.use(cookieParser());
-const cookieParser = require("cookie-parser");
 
 app.get("/", (req, res) => {
   res.send("Hello");
