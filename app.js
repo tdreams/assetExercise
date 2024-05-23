@@ -2,11 +2,34 @@ const express = require("express");
 const path = require("path"); // Make sure to require 'path'
 const app = express();
 const fs = require("fs").promises;
+const { v4: uuidv4 } = require("uuid");
+
+const allowedOrigins = [
+  "http://localhost:3200",
+  "https://assetexercise.onrender.com",
+  "https://assetexercise.onrender.com/chatroom",
+];
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // Allow cookies to be sent
+};
+
+app.use(cors(corsOptions));
+
+const cors = require("cors");
 
 // If you have static files to serve directly (e.g., images, CSS, JS for your HTML files),
 // you should specify their directory here. If it's not 'public', adjust accordingly.
 app.use(express.static("public"));
 app.use(express.json());
+app.use(cookieParser());
+const cookieParser = require("cookie-parser");
 
 app.get("/", (req, res) => {
   res.send("Hello");
