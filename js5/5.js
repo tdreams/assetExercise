@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const allowedOrigins = [
   "http://localhost:3200",
   "https://assetexercise.onrender.com",
+  "https://assetexercise.onrender.com/chatroom",
 ];
 const corsOptions = {
   origin: (origin, callback) => {
@@ -26,10 +27,13 @@ app.use(express.static("public"));
 const router = express.Router();
 
 const authenticate = (req, res, next) => {
-  const token = req.cookies.token;
+  const token = req.cookies ? req.cookies.token : null;
   if (!token) {
-    return res.status(403).json({ message: "No token provided" });
+    return res
+      .status(403)
+      .json({ message: "Authentication token is missing." });
   }
+
   fetch("https://js5.c0d3.com/auth/api/session", {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -37,11 +41,14 @@ const authenticate = (req, res, next) => {
     .then((data) => {
       req.user = data;
       if (!req.user || !req.user.username) {
-        return res.status(403).json({ message: "Invalid token" });
+        return res.status(403).json({ message: "Invalid or expired token." });
       }
       next();
     })
-    .catch((err) => res.status(403).json({ message: "Invalid token" }));
+    .catch((err) => {
+      console.error("Error during authentication:", err);
+      res.status(403).json({ message: "Authentication error." });
+    });
 };
 
 router.post("/api/login", (req, res) => {
