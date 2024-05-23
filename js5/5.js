@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const allowedOrigins = [
   "http://localhost:3200",
-  "https://assetexercise.onrender.com/",
+  "https://assetexercise.onrender.com",
 ];
 const corsOptions = {
   origin: (origin, callback) => {
