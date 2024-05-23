@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>ChatRoom</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="roomComponent">
+        <h1>Enter Room Name</h1>
+        <div>
+          <form class="form" id="roomForm">
+            <input type="text" class="roomName" placeholder="room" required />
+            <input type="submit" class="submitBtn" value="submit" />
+          </form>
+        </div>
+      </div>
+
+      <div id="chatroom">
+        <div class="roomChannelList"></div>
+        <div class="messagesContainer">
+          <h1 class="roomCurr"></h1>
+          <div id="messages"></div>
+          <div class="inputMessages">
+            <input
+              type="text"
+              id="messageInput"
+              placeholder="Enter your message"
+            />
+            <button onclick="sendMessage()" class="sendBtn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let messageFetchInterval;
+      let currentRoom = null;
+      let roomsInterval = null;
+      const titleRoom = document.querySelector(".roomCurr");
+      let lastActiveTime = localStorage.getItem("lastActiveTime");
+      lastActiveTime = lastActiveTime
+        ? new Date(JSON.parse(lastActiveTime))
+        : new Date();
+
+      document
+        .getElementById("roomForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          if (messageFetchInterval) clearInterval(messageFetchInterval);
+          currentRoom = e.target.querySelector(".roomName").value;
+          document.querySelector(".roomComponent").style.display = "none";
+          document.getElementById("chatroom").style.display = "flex";
+          createRoom(currentRoom);
+          loadMessages();
+          messageFetchInterval = setInterval(loadMessages, 2000);
+        });
+
+      document
+        .getElementById("messageInput")
+        .addEventListener("keyup", function (e) {
+          if (e.key == "Enter") {
+            sendMessage();
+          }
+        });
+
+      function loadMessages() {
+        fetch(`/api/${currentRoom}/messages`, {
+          credentials: "include",
+        })
+          .then((resp) => resp.json())
+          .then((data) => {
+            titleRoom.textContent = `Chatroom: ${currentRoom}`;
+            const messagesDiv = document.getElementById("messages");
+            const shouldScroll =
+              messagesDiv.scrollTop + messagesDiv.clientHeight >=
+              messagesDiv.scrollHeight - 10;
+            messagesDiv.innerHTML = "";
+
+            data.forEach((message) => {
+              const messageTime = new Date(message.timestamp);
+              const messageText = document.createElement("div");
+              const messageUser = document.createElement("span");
+              const messageContent = document.createElement("span");
+              const messageTimestamp = document.createElement("span");
+
+              messageUser.textContent = message.user;
+              messageUser.className = "message-user";
+
+              messageUser.dataset.userId = message.userId; // Use data attribute to store user ID if available
+              messageUser.addEventListener("mouseover", showUserInfo);
+              messageUser.addEventListener("mouseout", hideUserInfo);
+
+              messageTimestamp.textContent = `[${messageTime.toLocaleTimeString()}]`;
+              messageTimestamp.className = "message-timestamp";
+
+              messageContent.textContent = message.text;
+              messageContent.className = "message-text";
+
+              messageText.className = "message";
+
+              if (messageTime > lastActiveTime) {
+                messageText.classList.add("new-message");
+              }
+
+              messageText.appendChild(messageTimestamp);
+              messageText.appendChild(messageUser);
+              messageText.appendChild(messageContent);
+              messagesDiv.appendChild(messageText);
+
+              messageText.addEventListener("animationend", () => {
+                messageText.classList.remove("new-message");
+              });
+            });
+
+            // Scroll to the bottom of the messages container
+            if (shouldScroll && messagesDiv.scrollHeight > 500) {
+              messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+
+            // Update last active time
+            lastActiveTime = new Date();
+            localStorage.setItem(
+              "lastActiveTime",
+              JSON.stringify(lastActiveTime)
+            );
+          });
+      }
+
+      function sendMessage() {
+        const messageInput = document.getElementById("messageInput");
+        const messageText = messageInput.value;
+        messageInput.value = "";
+
+        fetch(`/api/${currentRoom}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ text: messageText }),
+        }).then((resp) => resp.json().then(() => loadMessages()));
+      }
+
+      function fetchRooms() {
+        fetch(`/api/rooms`, { credentials: "include" })
+          .then((resp) => resp.json())
+          .then((rooms) => {
+            const roomListDiv = document.querySelector(".roomChannelList");
+            roomListDiv.innerHTML = "";
+            rooms.forEach((room) => {
+              const roomDiv = document.createElement("div");
+              roomDiv.classList.add("room");
+              roomDiv.textContent = room;
+              roomDiv.onclick = () => changeRoom(room);
+              roomListDiv.appendChild(roomDiv);
+            });
+          })
+          .catch((err) => {
+            console.error("Error fetching rooms", err);
+            clearInterval(roomsInterval);
+          });
+      }
+
+      function startRoomFetch() {
+        if (roomsInterval) clearInterval(roomsInterval);
+        setInterval(fetchRooms, 2000);
+      }
+      startRoomFetch();
+
+      function changeRoom(room) {
+        const roomListDiv = document.querySelector(".roomChannelList");
+        Array.from(roomListDiv.children).forEach((div) => {
+          if (div.textContent === room) div.classList.add("active-room");
+          else div.classList.remove("active-room");
+        });
+        currentRoom = room;
+        document.querySelector(".roomComponent").style.display = "none";
+        document.getElementById("chatroom").style.display = "flex";
+        loadMessages();
+        titleRoom.textContent = `Chatroom: ${currentRoom}`;
+      }
+
+      function createRoom(roomName) {
+        fetch("/api/rooms", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ roomName }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              if (resp.status === 409) {
+                alert("Room already exists.");
+              } else {
+                throw new Error("Failed to create room");
+              }
+            }
+            return resp.json();
+          })
+          .then(() => {
+            fetchRooms();
+            // Refresh the list of rooms
+            changeRoom(roomName); // Switch to the newly created room
+          })
+          .catch((error) => {
+            console.error("Error creating room:", error);
+            alert("Could not create room: " + error.message);
+          });
+      }
+
+      function showUserInfo(event) {
+        const userId = event.target.dataset.userId;
+        const userInfoPopup = document.createElement("div");
+        userInfoPopup.className = "user-info-popup";
+        userInfoPopup.style.position = "absolute";
+        userInfoPopup.style.left = `${event.pageX + 10}px`;
+        userInfoPopup.style.top = `${event.pageY + 10}px`;
+
+        fetch(`/api/session`, { credentials: "include" }) // Assuming no user-specific data is required
+          .then((response) => response.json())
+          .then((user) => {
+            const userInfoHtml = `Name: ${user.name},<br/> Email: ${user.email}`;
+            userInfoPopup.innerHTML = userInfoHtml;
+            document.body.appendChild(userInfoPopup);
+          })
+          .catch((error) => {
+            userInfoPopup.textContent = "Failed to load user info";
+            document.body.appendChild(userInfoPopup);
+          });
+      }
+
+      function hideUserInfo() {
+        const popups = document.querySelectorAll(".user-info-popup");
+        popups.forEach((popup) => popup.remove());
+      }
+    </script>
+  </body>
+</html>

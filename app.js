@@ -16,6 +16,9 @@ app.get("/", (req, res) => {
 const js54Router = require("./js5/4"); // Adjust the path as necessary
 app.use(js54Router); // Use the router from js5/1.js
 
+const js55Router = require("./js5/5"); // Adjust the path as necessary
+app.use(js55Router);
+
 const port = process.env.PORT || 8123;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
