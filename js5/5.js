@@ -19,12 +19,12 @@ const corsOptions = {
   },
   credentials: true, // Allow cookies to be sent
 };
+const router = express.Router();
 
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static("public"));
-const router = express.Router();
 
 const authenticate = (req, res, next) => {
   const token = req.cookies ? req.cookies.token : null;

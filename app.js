@@ -3,6 +3,7 @@ const path = require("path"); // Make sure to require 'path'
 const app = express();
 const fs = require("fs").promises;
 const { v4: uuidv4 } = require("uuid");
+const cors = require("cors");
 
 const allowedOrigins = [
   "http://localhost:3200",
@@ -21,8 +22,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-const cors = require("cors");
 
 // If you have static files to serve directly (e.g., images, CSS, JS for your HTML files),
 // you should specify their directory here. If it's not 'public', adjust accordingly.
