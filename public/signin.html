@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Sign/Login</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logComponent">
+        <h1>You must be Logged in</h1>
+        <div class="login">
+          <p class="infoL">
+            No Account? You can
+            <span class="link" onclick="toggleForm()">Sign up instead</span>
+          </p>
+          <form class="form" id="loginForm">
+            <input
+              type="text"
+              class="username"
+              placeholder="username"
+              required
+            />
+            <input
+              type="password"
+              class="password"
+              placeholder="password"
+              required
+            />
+            <input type="submit" class="submitBtn" value="submit" />
+          </form>
+        </div>
+      </div>
+
+      <div class="signComponent">
+        <h1>New Account!</h1>
+        <div class="signIn">
+          <p class="infoS">
+            Already have an account? You can
+            <span class="link" onclick="toggleForm()">Login instead</span>
+          </p>
+          <form class="form" id="signupForm">
+            <input
+              type="text"
+              class="fullname"
+              placeholder="fullname"
+              required
+            />
+            <input
+              type="text"
+              class="username"
+              placeholder="username"
+              required
+            />
+            <input type="email" class="email" placeholder="email" required />
+            <input
+              type="password"
+              class="password"
+              placeholder="password"
+              required
+            />
+            <input type="submit" class="submitBtn" value="submit" />
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleForm() {
+        document.querySelector(".logComponent").style.display =
+          document.querySelector(".logComponent").style.display === "none"
+            ? "block"
+            : "none";
+        document.querySelector(".signComponent").style.display =
+          document.querySelector(".signComponent").style.display === "block"
+            ? "none"
+            : "block";
+      }
+
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const username = e.target.querySelector(".username").value.trim();
+          const password = e.target.querySelector(".password").value.trim();
+
+          login(username, password);
+        });
+
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const fullname = e.target.querySelector(".fullname").value.trim();
+          const username = e.target.querySelector(".username").value.trim();
+          const email = e.target.querySelector(".email").value.trim();
+          const password = e.target.querySelector(".password").value.trim();
+
+          signup(fullname, username, email, password);
+        });
+
+      function login(username, password) {
+        fetch("/api/sessions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error("Invalid username or password");
+            }
+            return resp.json();
+          })
+          .then((data) => {
+            sessionStorage.setItem("userData", JSON.stringify(data.user));
+            window.location.href = `/welcome?user=${username}`;
+          })
+          .catch((err) => {
+            const infoL = document.querySelector(".infoL");
+            infoL.textContent = "Please enter a valid username or password";
+            infoL.classList.add("error");
+          });
+      }
+
+      function signup(fullname, username, email, password) {
+        fetch("/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fullname,
+            username,
+            email,
+            password,
+          }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error("Failed to create account");
+            }
+            return resp.json();
+          })
+          .then((data) => {
+            console.log("Signup successful", data);
+            window.location.href = `/welcome?user=${username}`;
+          })
+          .catch((err) => {
+            console.error("Signup failed:", err);
+            alert("Failed to login:" + err.message);
+          });
+      }
+    </script>
+  </body>
+</html>
