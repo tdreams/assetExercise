@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path"); // Make sure to require 'path'
 const app = express();
+const bcrypt = require("bcrypt");
 const fs = require("fs").promises;
 const { v4: uuidv4 } = require("uuid");
 const cors = require("cors");
