@@ -64,7 +64,7 @@ router.get("/api/job/:jobId", (req, res) => {
 
 router.get("/imageAnalysis", (req, res) => {
   res.sendFile("dragDrop.html", {
-    root: path.join(__dirname, "./public"),
+    root: "./public",
   });
 });
 
