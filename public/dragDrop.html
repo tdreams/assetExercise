@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Analysis</title>
+    <link rel="stylesheet" href="./dropStyle.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f2f5;
+      }
+      .container {
+        width: 80%;
+        max-width: 1200px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .drop-area {
+        width: 100%;
+        padding: 50px;
+        border: 2px dashed #ccc;
+        text-align: center;
+        background-color: #fff;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: background-color 0.3s;
+      }
+      .drop-area:hover {
+        background-color: #e2eefd;
+      }
+      .drop-area.dropping {
+        background-color: #8f8;
+      }
+      .result-area {
+        display: flex;
+        width: 100%;
+      }
+      .image-container,
+      .analysis-result {
+        flex: 1;
+        padding: 20px;
+        background-color: #fff;
+        margin-right: 10px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .image-container {
+        margin-right: 20px;
+      }
+      .image-container img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin-top: 10px;
+      }
+      h2 {
+        margin-top: 0;
+      }
+      .justified-text {
+        text-align: justify;
+        font-size: 16px;
+        line-height: 1.5;
+        white-space: pre-wrap; /* Keep the whitespaces */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="drop-area">
+        <p>Drag files here</p>
+      </div>
+      <div class="result-area">
+        <div class="image-container">
+          <h2>Image</h2>
+          <img id="uploadedImage" src="" alt="Uploaded Image" />
+        </div>
+        <div class="analysis-result">
+          <h2>Analysis Result</h2>
+          <div id="resultText" class="justified-text"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const dropArea = document.querySelector(".drop-area");
+      const resultText = document.getElementById("resultText");
+      const uploadedImage = document.getElementById("uploadedImage");
+
+      dropArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropArea.classList.add("dropping");
+      });
+
+      dropArea.addEventListener("dragleave", () => {
+        dropArea.classList.remove("dropping");
+      });
+
+      dropArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropArea.classList.remove("dropping");
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length) {
+          handleFiles(files);
+        }
+      });
+
+      function handleFiles(files) {
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append("userFiles", file);
+          displayImage(file);
+        });
+
+        fetch("/files", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            checkJobStatus(data.statusUrl);
+          })
+          .catch((error) => {
+            console.error("Error uploading files:", error);
+          });
+      }
+
+      function displayImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          uploadedImage.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function checkJobStatus(url) {
+        const intervalId = setInterval(() => {
+          fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.status === "completed" || data.status === "failed") {
+                clearInterval(intervalId);
+                displayResults(data.results);
+              } else {
+                resultText.textContent = "Processing files...";
+              }
+            })
+            .catch((error) => {
+              clearInterval(intervalId);
+              console.error("Error checking job status:", error);
+            });
+        }, 1000);
+      }
+
+      function displayResults(results) {
+        results.forEach((result) => {
+          const resultDiv = document.createElement("div");
+          resultDiv.classList.add("justified-text");
+          if (result.error) {
+            resultDiv.innerHTML = `Error - ${result.error}`;
+          } else {
+            resultDiv.innerHTML = `
+             <span id="text-${result.fileName.replace(/\s+/g, "-")}"></span>`;
+            resultText.appendChild(resultDiv);
+            typeText(
+              `text-${result.fileName.replace(/\s+/g, "-")}`,
+              result.text
+            );
+          }
+          resultText.appendChild(resultDiv);
+        });
+      }
+
+      function typeText(elementId, text) {
+        let i = 0;
+        const speed = 20; // typing speed in milliseconds
+        const element = document.getElementById(elementId);
+
+        function typeWriter() {
+          if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(typeWriter, speed);
+          }
+        }
+
+        typeWriter();
+      }
+    </script>
+  </body>
+</html>
