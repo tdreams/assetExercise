@@ -102,6 +102,23 @@
       }
 
       loadImages();
+
+      // Function to call the deleteImages API
+      function deleteOldImages() {
+        fetch("/deleteImages", {
+          method: "DELETE",
+        })
+          .then((resp) => resp.json())
+          .then((data) => {
+            console.log("Old images deleted successfully", data);
+          })
+          .catch((err) => {
+            console.error("Error deleting images", err);
+          });
+      }
+
+      // Call deleteOldImages function every 24 hours
+      setInterval(deleteOldImages, 24 * 60 * 60 * 1000);
     </script>
   </body>
 </html>

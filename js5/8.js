@@ -37,6 +37,40 @@ router.post("/saveImage", (req, res) => {
   });
 });
 
+router.delete("/deleteImages", (req, res) => {
+  const now = Date.now(); // Current time in milliseconds
+  const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+  fs.readdir(imagesDir, (err, files) => {
+    if (err) {
+      return res.status(500).json({ error: "Failed to read images directory" });
+    }
+
+    files.forEach((file) => {
+      const filePath = path.join(imagesDir, file);
+      fs.stat(filePath, (err, stats) => {
+        if (err) {
+          console.error("Failed to get file stats", err);
+          return;
+        }
+
+        // Check if the file was modified more than 24 hours ago
+        if (now - stats.mtimeMs > twentyFourHours) {
+          fs.unlink(filePath, (err) => {
+            if (err) {
+              console.error("Failed to delete file", err);
+            } else {
+              console.log(`Deleted file: ${file}`);
+            }
+          });
+        }
+      });
+    });
+
+    res.status(200).json({ message: "Old images deleted successfully" });
+  });
+});
+
 app.get("/cheese", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "cheese.html"));
 });
