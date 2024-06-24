@@ -1,0 +1,77 @@
+/* Basic reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.video,
+.canvas-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 45%;
+}
+
+video,
+canvas {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  border: 1px solid #007bff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.camera-icon {
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.camera-icon:hover {
+  transform: scale(1.1);
+}
+
+.imagesContainer {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.imagesContainer a {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #007bff;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.imagesContainer a:hover {
+  color: #0056b3;
+  transform: scale(1.05);
+}

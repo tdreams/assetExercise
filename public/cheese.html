@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cheese</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="video">
+        <video id="video" autoplay></video>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas" width="600" height="400"></canvas>
+      </div>
+    </div>
+
+    <div class="camera-icon" id="snap">
+      <svg
+        height="60"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M12 7C9.243 7 7 9.243 7 12C7 14.757 9.243 17 12 17C14.757 17 17 14.757 17 12C17 9.243 14.757 7 12 7ZM12 15.5C10.067 15.5 8.5 13.933 8.5 12C8.5 10.067 10.067 8.5 12 8.5C13.933 8.5 15.5 10.067 15.5 12C15.5 13.933 13.933 15.5 12 15.5ZM19 4H16.586L15.293 2.707C15.105 2.519 14.851 2.414 14.586 2.414H9.414C9.148 2.414 8.895 2.519 8.707 2.707L7.414 4H5C3.895 4 3 4.895 3 6V18C3 19.105 3.895 20 5 20H19C20.105 20 21 19.105 21 18V6C21 4.895 20.105 4 19 4ZM19 18H5V6H8.586L9.879 4.707C10.073 4.513 10.325 4.414 10.586 4.414H13.414C13.675 4.414 13.927 4.513 14.121 4.707L15.414 6H19V18Z"
+          fill="#007bff"
+        />
+      </svg>
+    </div>
+    <div class="imagesContainer"></div>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const videoElement = document.getElementById("video");
+      const snapButton = document.getElementById("snap");
+      const imagesContainer = document.querySelector(".imagesContainer");
+
+      snapButton.addEventListener("click", () => {
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL("image/png");
+
+        // Extract the base64 encoded image data
+        const encodedImageData = imageData.split(",")[1];
+
+        // Send the image data to the server
+        fetch("/saveImage", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ image: encodedImageData }),
+        })
+          .then((resp) => resp.json())
+          .then((data) => {
+            console.log("Image saved successfully", data);
+            loadImages();
+          })
+          .catch((err) => {
+            console.error("Error saving image", err);
+          });
+      });
+
+      navigator.mediaDevices
+        .getUserMedia({
+          video: true,
+          audio: false,
+        })
+        .then((stream) => {
+          videoElement.srcObject = stream;
+          videoElement.play();
+        })
+        .catch((error) => console.log("Error accessing webcam", error));
+
+      function loadImages() {
+        fetch("/images")
+          .then((res) => res.json())
+          .then((imageUrls) => {
+            imagesContainer.innerHTML = "";
+            imageUrls.forEach((url) => {
+              const link = document.createElement("a");
+              link.href = "#";
+              link.textContent = url;
+              link.addEventListener("click", (event) => {
+                event.preventDefault();
+                loadImageToCanvas(url);
+              });
+              imagesContainer.appendChild(link);
+              imagesContainer.appendChild(document.createElement("br"));
+            });
+          })
+          .catch((err) => console.log("Error loading images", err));
+      }
+
+      function loadImageToCanvas(url) {
+        const img = new Image();
+        img.onload = () =>
+          context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        img.src = url;
+      }
+
+      loadImages();
+    </script>
+  </body>
+</html>

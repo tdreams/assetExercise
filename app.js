@@ -7,6 +7,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
 const allowedOrigins = [
+  "http://localhost:8123",
   "http://localhost:3200",
   "https://assetexercise.onrender.com",
   "https://assetexercise.onrender.com/chatroom",
@@ -27,7 +28,7 @@ app.use(cors(corsOptions));
 // If you have static files to serve directly (e.g., images, CSS, JS for your HTML files),
 // you should specify their directory here. If it's not 'public', adjust accordingly.
 app.use(express.static("public"));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
 app.get("/", (req, res) => {
@@ -46,6 +47,9 @@ app.use(js56Router);
 
 const js57Router = require("./js5/7"); // Adjust the path as necessary
 app.use(js57Router);
+
+const js58Router = require("./js5/8"); // Adjust the path as necessary
+app.use(js58Router);
 
 const port = process.env.PORT || 8123;
 app.listen(port, () => {
