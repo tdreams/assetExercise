@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="memeChat.css" />
+    <title>Camera</title>
+  </head>
+  <body>
+    <div class="box" style="width: 550px; height: auto">
+      <h2 class="title">Meme Creator</h2>
+      <p class="info">Create and view your memes</p>
+      <div class="memeDisplayContainer">
+        <div class="close">&times;</div>
+        <div class="memeDisplay"></div>
+      </div>
+      <div class="videoContainer">
+        <video id="userVideo" autoplay></video>
+        <input type="text" id="messageInput" placeholder="Enter your message" />
+        <button id="sendButton">Take Picture</button>
+        <div id="memeContainer"></div>
+        <button id="nextButton">Next</button>
+      </div>
+    </div>
+    <script>
+      const memeDisplayContainer = document.querySelector(
+        ".memeDisplayContainer"
+      );
+      const messageInput = document.getElementById("messageInput");
+      const memeDisplay = document.querySelector(".memeDisplay");
+
+      navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+        document.getElementById("userVideo").srcObject = stream;
+      });
+
+      document.getElementById("nextButton").addEventListener("click", () => {
+        window.location.href = "/memeChat";
+      });
+
+      memeDisplayContainer.addEventListener("click", () => {
+        memeDisplayContainer.style.display = "none";
+        memeDisplay.innerHTML = ""; // Clear previous meme
+      });
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+          return parts.pop().split(";").shift();
+        }
+        return undefined;
+      }
+
+      document.getElementById("sendButton").addEventListener("click", () => {
+        const userVideo = document.getElementById("userVideo");
+        const message = document.getElementById("messageInput").value;
+        const canvas = document.createElement("canvas");
+        canvas.width = userVideo.videoWidth;
+        canvas.height = userVideo.videoHeight;
+        const context = canvas.getContext("2d");
+        context.drawImage(userVideo, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL("image/png").split(",")[1];
+        messageInput.value = "";
+
+        const username = getCookie("username");
+        if (message.trim()) {
+          fetch("/image", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: username,
+              text: message,
+              data: imageData,
+            }),
+          })
+            .then((response) => {
+              if (response.status === 201) {
+                alert("Meme created");
+                document.getElementById("sendButton").textContent = "Re-Take";
+                loadMemes();
+              } else {
+                return response.text().then((msg) => {
+                  alert("Failed to create meme: " + msg);
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        } else {
+          alert("Please enter a text");
+        }
+      });
+
+      function loadMemes() {
+        fetch("/image")
+          .then((resp) => resp.json())
+          .then((memes) => {
+            const memeContainer = document.getElementById("memeContainer");
+            memeContainer.innerHTML = "";
+            const username = getCookie("username");
+            const userMemes = memes.filter((meme) => meme.includes(username));
+
+            // Render memes
+            userMemes.forEach((meme) => {
+              const img = document.createElement("img");
+              img.classList.add("memePrev");
+              img.src = `/images/${meme}?${Date.now()}`;
+              memeContainer.appendChild(img);
+
+              img.addEventListener("click", () => {
+                memeDisplay.innerHTML = ""; // Clear previous meme
+                const displayImg = document.createElement("img");
+                displayImg.src = img.src;
+                displayImg.classList.add("memePrev");
+                memeDisplay.appendChild(displayImg);
+                memeDisplayContainer.style.display = "flex";
+              });
+            });
+
+            // Show or hide the Next button
+            const nextButton = document.getElementById("nextButton");
+            nextButton.style.display = userMemes.length > 0 ? "block" : "none";
+          })
+          .catch((error) => console.error("Error loading memes:", error));
+      }
+
+      // Load memes when the page loads
+      document.addEventListener("DOMContentLoaded", loadMemes);
+    </script>
+  </body>
+</html>

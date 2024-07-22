@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="memeChat.css" />
+  </head>
+  <body>
+    <div class="box">
+      <h2 class="title">Login</h2>
+      <p class="info">Please fill in your credential to login</p>
+      <p class="credential">Username</p>
+      <input type="text" class="username" />
+      <button id="login">Login</button>
+    </div>
+
+    <script>
+      const info = document.querySelector(".info");
+
+      function setCookie(name, value, days) {
+        const d = new Date();
+        d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+        const expires = "expires=" + d.toUTCString();
+        document.cookie = name + "=" + value + ";" + expires + ";path=/";
+      }
+
+      document.getElementById("login").addEventListener("click", () => {
+        const username = document.querySelector(".username").value;
+        fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        })
+          .then((resp) => {
+            if (resp.ok) {
+              return resp.json();
+            } else {
+              return resp.text().then((msg) => {
+                throw new Error(msg);
+              });
+            }
+          })
+          .then((data) => {
+            setCookie("username", username, 1); // Set the cookie to expire in 1 day
+            window.location.href = data.redirect;
+          })
+          .catch((err) => {
+            console.error("Error", err);
+            info.textContent = err.message;
+          });
+      });
+    </script>
+  </body>
+</html>

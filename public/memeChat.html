@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="memeChat.css" />
+
+    <title>MemeChat</title>
+  </head>
+  <body>
+    <div class="chat-interface">
+      <div class="chatroom">
+        <div class="chatroomList"></div>
+        <div class="profile">
+          <div class="profileInfo">
+            <div class="profImg"></div>
+            <p class="name"></p>
+          </div>
+          <div class="AddChannel">
+            <img
+              src="https://img.icons8.com/?size=100&id=60953&format=png&color=FFFFFF"
+              alt="Icon"
+              style="
+                width: 20px;
+                height: 20px;
+                vertical-align: middle;
+                cursor: pointer;
+              "
+            />
+
+            <div class="addButtonDesc">
+              <p>Add new channel</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="messagesContainer">
+        <div class="box newChannelDisplay">
+          <div class="close">&times;</div>
+          Channel Name:
+          <input type="text" class="NewChannelName" required />
+          <button id="sendButton">Create Channel</button>
+        </div>
+        <div id="messages"></div>
+
+        <input type="text" class="textInput" placeholder="Enter your message" />
+      </div>
+      <div id="users" class="users"></div>
+    </div>
+
+    <script>
+      let currentRoom = null;
+      const close = document.querySelector(".close");
+      const newChannelDisplay = document.querySelector(".newChannelDisplay");
+      const addButtonDesc = document.querySelector(".addButtonDesc");
+      const AddChannel = document.querySelector(".AddChannel");
+      const createNewChannel = document.getElementById("sendButton");
+      const textInput = document.querySelector(".textInput");
+      const messagesContainer = document.querySelector(".messagesContainer");
+
+      if (currentRoom == null) {
+        textInput.style.display = "none";
+      }
+
+      //creation of new channel
+      createNewChannel.addEventListener("click", (e) => {
+        currentRoom = document.querySelector(".NewChannelName").value;
+        document.querySelector(".NewChannelName").value = "";
+
+        newChannelDisplay.style.display = "none";
+
+        // Remove welcome message if it exists
+        const welcomeMessageDiv = document.querySelector(".welcome-message");
+        if (welcomeMessageDiv) {
+          welcomeMessageDiv.remove();
+        }
+        createRoom(currentRoom);
+
+        //load messages
+        loadMessages();
+      });
+
+      close.addEventListener("click", () => {
+        newChannelDisplay.style.display = "none";
+      });
+
+      AddChannel.addEventListener("click", () => {
+        newChannelDisplay.style.display = "flex";
+        addButtonDesc.style.display = "none";
+      });
+      AddChannel.addEventListener("mouseenter", () => {
+        addButtonDesc.style.display = "block";
+      });
+      AddChannel.addEventListener("mouseleave", () => {
+        addButtonDesc.style.display = "none";
+      });
+      const profImg = document.querySelector(".profImg");
+      const username = getCookie("username");
+      const name = document.querySelector(".name");
+      name.textContent =
+        username.charAt(0).toUpperCase() + username.substring(1);
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+          return parts.pop().split(";").shift();
+        }
+        return undefined;
+      }
+
+      fetch("/image")
+        .then((resp) => resp.json())
+        .then((memes) => {
+          profImg.innerHTML = "";
+          const userMemes = memes.filter((meme) => meme.includes(username));
+
+          userMemes.forEach((meme) => {
+            const img = document.createElement("img");
+            img.classList.add("memeProf");
+            img.src = `/images/${meme}?${Date.now()}`;
+            profImg.appendChild(img);
+          });
+        });
+
+      //fetch rooms
+      function fetchRooms() {
+        fetch("api/memerooms")
+          .then((resp) => resp.json())
+          .then((rooms) => {
+            const chatRoomListDiv = document.querySelector(".chatroomList");
+            chatRoomListDiv.innerHTML = "";
+            if (rooms.length === 0) {
+              // Display the welcome message if no rooms are available
+              displayWelcomeMessage();
+            } else {
+              rooms.forEach((room) => {
+                const roomDiv = document.createElement("div");
+                roomDiv.classList.add("room");
+                roomDiv.textContent = room;
+                roomDiv.onclick = () => changeRoom(room);
+                chatRoomListDiv.appendChild(roomDiv);
+              });
+            }
+
+            // Set the first room as active by default if there are any rooms
+            if (rooms.length > 0 && !currentRoom) {
+              changeRoom(rooms[0]);
+            }
+            updateRoomStyles(null, currentRoom);
+          })
+          .catch((err) => {
+            console.error("Error fetching rooms", err);
+            //clear interval function to refresh rooms channel
+          });
+      }
+
+      //function changeRoom
+
+      //Rooms creation
+      function createRoom(roomName) {
+        fetch("/api/memerooms", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ roomName }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              if (resp.status === 409) {
+                throw new Error("Room already exists.");
+              } else {
+                throw new Error("Failed to create room");
+              }
+            }
+            return resp.json();
+          })
+          .then((data) => {
+            console.log("Room created:", data);
+            fetchRooms(); // Refresh the list of rooms
+            changeRoom(roomName); // Switch to the newly created room
+            fetchUsersInRoom(roomName);
+          })
+          .catch((error) => {
+            console.error("Error creating room:", error);
+            alert("Could not create room: " + error.message);
+          });
+      }
+
+      function loadMemes() {
+        fetch("/image")
+          .then((resp) => resp.json())
+          .then((memes) => {
+            const memeContainer = document.getElementById("memeContainer");
+            memeContainer.innerHTML = "";
+            const username = getCookie("username");
+            const userMemes = memes.filter((meme) => meme.includes(username));
+
+            // Render memes
+            userMemes.forEach((meme) => {
+              const img = document.createElement("img");
+              img.classList.add("memePrev");
+              img.src = `/images/${meme}?${Date.now()}`;
+              memeContainer.appendChild(img);
+
+              img.addEventListener("click", () => {
+                memeDisplay.innerHTML = ""; // Clear previous meme
+                const displayImg = document.createElement("img");
+                displayImg.src = img.src;
+                displayImg.classList.add("memePrev");
+                memeDisplay.appendChild(displayImg);
+                memeDisplayContainer.style.display = "flex";
+              });
+            });
+
+            // Show or hide the Next button
+            const nextButton = document.getElementById("nextButton");
+            nextButton.style.display = userMemes.length > 0 ? "block" : "none";
+          })
+          .catch((error) => console.error("Error loading memes:", error));
+      }
+
+      function updateRoomStyles(oldRoom, newRoom) {
+        const chatRoomListDiv = document.querySelector(".chatroomList");
+        Array.from(chatRoomListDiv.children).forEach((div) => {
+          if (div.textContent === newRoom) {
+            div.classList.add("active-room");
+          } else {
+            div.classList.remove("active-room");
+          }
+        });
+      }
+
+      // Function to change room
+      function changeRoom(newRoom) {
+        // Update currentRoom before changing
+        const oldRoom = currentRoom;
+        currentRoom = newRoom;
+        updateRoomStyles(oldRoom, newRoom);
+
+        //update the adress bar with the current user and room
+
+        const params = new URLSearchParams(window.location.search);
+
+        const username = getCookie("username");
+        if (username) {
+          params.set("user", username);
+        }
+        params.set("room", newRoom);
+        window.history.replaceState(
+          {},
+          "",
+          `${window.location.pathname}?${params.toString()}`
+        );
+
+        // Update the user's room on the server
+        fetch("/api/changeRoom", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ room: newRoom }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error("Failed to change room");
+            }
+            return resp.json();
+          })
+          .then((data) => {
+            console.log("Room changed:", data);
+            fetchUsersInRoom(oldRoom); // Update the old room's user list
+            fetchUsersInRoom(newRoom); // Update the new room's user list
+            loadMessages(); // Load messages for the new room
+            textInput.style.display = "block";
+          })
+          .catch((error) => {
+            console.error("Error changing room:", error);
+          });
+      }
+
+      // Function to fetch and display users in the current room
+      function fetchUsersInRoom(room) {
+        console.log("Fetching users in room: " + room);
+        fetch(`/api/memerooms/${room}/users`, {
+          credentials: "include",
+        })
+          .then((resp) => resp.json())
+          .then((users) => {
+            console.log("Users fetched: ", users);
+            const usersDiv = document.getElementById("users");
+            usersDiv.innerHTML = "";
+
+            users.forEach((user) => {
+              const userDiv = document.createElement("div");
+              userDiv.classList.add("user");
+
+              const img = document.createElement("img");
+              img.classList.add("memeProf");
+              img.src = user.imagePath
+                ? `/${user.imagePath}`
+                : "default-image.png";
+              userDiv.appendChild(img);
+
+              const bigImg = document.createElement("img");
+              bigImg.classList.add("bigImg");
+              bigImg.src = img.src;
+              usersDiv.appendChild(bigImg);
+
+              const username = document.createElement("p");
+              username.classList.add("usernameRoom");
+              username.textContent = user.username;
+
+              userDiv.addEventListener("mouseover", () => {
+                const rect = userDiv.getBoundingClientRect();
+                bigImg.style.left = `${
+                  rect.left - 1.88 * userDiv.offsetWidth
+                }px`;
+                bigImg.style.top = `${rect.top}px`;
+                bigImg.style.display = "block";
+              });
+              userDiv.addEventListener("mouseleave", () => {
+                bigImg.style.display = "none";
+              });
+              userDiv.appendChild(username);
+              usersDiv.appendChild(userDiv);
+            });
+          })
+          .catch((err) => {
+            console.error("Error fetching users", err);
+          });
+      }
+
+      textInput.addEventListener("keyup", (e) => {
+        if (e.key === "Enter") {
+          if (textInput.value.trim()) {
+            console.log(textInput.value);
+
+            //sendMessage function
+            sendMessage();
+            textInput.value = "";
+          }
+        }
+      });
+
+      function sendMessage() {
+        if (currentRoom) {
+          fetch(`/api/${currentRoom}/message`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              text: textInput.value,
+            }),
+          }).then((resp) => resp.json().then(() => loadMessages()));
+        } else {
+          alert("Please select a room before sending a message");
+        }
+      }
+
+      //loadMessages function
+      function loadMessages() {
+        if (currentRoom) {
+          fetch(`/api/${currentRoom}/message`, {
+            credentials: "include",
+          })
+            .then((resp) => resp.json())
+            .then((data) => {
+              const messagesDiv = document.getElementById("messages");
+              const shouldScroll =
+                messagesDiv.scrollTop + messagesDiv.clientHeight >=
+                messagesDiv.scrollHeight - 10;
+              messagesDiv.innerHTML = "";
+
+              data.forEach((message, index) => {
+                const messageTime = new Date(message.timeStamp);
+                const messageDiv = document.createElement("div");
+                messageDiv.classList.add("message");
+
+                // Apply the new-message class only to the latest message
+                if (index === data.length - 1) {
+                  messageDiv.classList.add("new-message");
+
+                  // Remove the new-message class after the animation completes
+                  messageDiv.addEventListener("animationend", () => {
+                    messageDiv.classList.remove("new-message");
+                  });
+                }
+
+                const messageUserDiv = document.createElement("div");
+                messageUserDiv.classList.add("message-user");
+
+                // Display user meme
+                const userImg = document.createElement("img");
+                userImg.classList.add("memeProf");
+                userImg.src = message.user.imagePath
+                  ? `/${message.user.imagePath}`
+                  : "default-image.png";
+                messageUserDiv.appendChild(userImg);
+
+                // Display username
+                const messageUser = document.createElement("strong");
+                messageUser.classList.add("username");
+                messageUser.textContent =
+                  message.user.username.charAt(0).toUpperCase() +
+                  message.user.username.substring(1);
+                messageUserDiv.appendChild(messageUser);
+
+                messageDiv.appendChild(messageUserDiv);
+
+                // Display message content
+                const messageContent = document.createElement("span");
+                messageContent.textContent = `${message.text}`;
+                messageContent.classList.add("message-content");
+                messageDiv.appendChild(messageContent);
+
+                // Display timestamp
+                const messageTimeStamp = document.createElement("span");
+                messageTimeStamp.classList.add("timestamp");
+                messageTimeStamp.textContent = ` (${messageTime.toLocaleTimeString()})`;
+                messageDiv.appendChild(messageTimeStamp);
+
+                messagesDiv.appendChild(messageDiv);
+              });
+
+              // Scroll to the bottom of the messages container
+              if (shouldScroll && messagesDiv.scrollHeight > 500) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+              }
+            })
+            .catch((err) => {
+              console.error("Error loading messages", err);
+            });
+        } else {
+          console.log("No room selected");
+        }
+      }
+      document.addEventListener("DOMContentLoaded", () => {
+        const params = new URLSearchParams(window.location.search);
+        const user = params.get("user");
+        const room = params.get("room");
+        if (user && room) {
+          // Set the user and room from the URL
+          document.cookie = `username=${user}; path=/`;
+          currentRoom = room;
+          fetchRooms(); // Fetch and display rooms
+          changeRoom(room); // Set the current room
+        } else {
+          fetchRooms(); // Fetch and display rooms
+        }
+      });
+
+      function displayWelcomeMessage() {
+        const welcomeMessage = `<h1 class="welcome-title">Welcome to ChatMeme, ${username}!</h1>
+        <p class="pWelcome">
+          ChatMeme is a fun and interactive chat application where you can create and join various chat rooms, share your favorite memes, and connect with friends. 
+          <br><br>
+          It looks like there are no chat rooms created at the moment.
+          <br><br>
+          To get started, click on the logo <span class="logo">( + )</span> next to your username at the bottom left of the screen. This will allow you to create a new chat room and begin your ChatMeme journey.
+          <br><br>
+          We hope you enjoy using ChatMeme!
+        </p>`;
+        const welcomeDiv = document.createElement("div");
+        welcomeDiv.classList.add("welcome-message");
+        welcomeDiv.innerHTML = welcomeMessage;
+        document.querySelector(".messagesContainer").appendChild(welcomeDiv);
+      }
+    </script>
+  </body>
+</html>
