@@ -11,7 +11,7 @@ const fetch = require("node-fetch");
 const path = require("path");
 
 const app = express();
-const port = process.env.PORT || 8124;
+const port = 8124;
 
 app.use(cors());
 app.use(express.json());

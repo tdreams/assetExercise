@@ -8,6 +8,7 @@ const cookieParser = require("cookie-parser");
 
 const allowedOrigins = [
   "http://localhost:8123",
+  "http://localhost:8124",
   "http://localhost:3200",
   "https://assetexercise.onrender.com",
   "https://assetexercise.onrender.com/chatroom",
