@@ -129,6 +129,9 @@ const resolvers = {
     login: (_, { pokemon }, { req }) => {
       return resolvers.Query.pokemon(_, { name: pokemon })
         .then((pokemonData) => {
+          if (!pokemonData) {
+            throw new Error("Pokemon not found");
+          }
           const user = {
             id: Date.now().toString(),
             pokemon: pokemonData,
@@ -195,7 +198,7 @@ server.start().then(() => {
 
 // Serve the addLesson HTML file
 router.get("/addLesson", (req, res) => {
-  res.sendFile("addLessons.html", { root: "./js6/public" });
+  res.sendFile("addLessons.html", { root: "./js6/public/" });
 });
 
 app.use("/", router);

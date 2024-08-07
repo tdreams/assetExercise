@@ -152,7 +152,7 @@
       }
 
       function checkUserSession() {
-        fetch(serverUrl, {
+        fetch("/graphql", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -213,7 +213,7 @@
             clickHandler();
             return;
           }
-          fetch(serverUrl, {
+          fetch("/graphql", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -251,7 +251,7 @@
       }
 
       function fetchPokemonDetails(name) {
-        fetch(serverUrl, {
+        fetch("/graphql", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -304,29 +304,29 @@
       }
 
       function loginPokemon(name) {
-        return fetch(serverUrl, {
+        return fetch("/graphql", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             query: `
-          mutation login($pokemon: String!) {
-            login(pokemon: $pokemon) {
-              user {
-                id
-                pokemon {
-                  name
-                  image
-                }
-                image
-                lessons {
-                  title
-                }
-              }
+      mutation login($pokemon: String!) {
+        login(pokemon: $pokemon) {
+          user {
+            id
+            pokemon {
+              name
+              image
+            }
+            image
+            lessons {
+              title
             }
           }
-        `,
+        }
+      }
+    `,
             variables: {
               pokemon: name,
             },
@@ -340,6 +340,9 @@
           })
           .then((result) => {
             const user = result.data.login.user;
+            if (!user) {
+              throw new Error("Login failed");
+            }
             console.log("Logged in as:", user);
             // Update UI to show user logged in state
             updateUIWithUser(user);
@@ -349,7 +352,7 @@
       }
 
       function fetchLessons(userLessons = []) {
-        fetch(serverUrl, {
+        fetch("/graphql", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -405,7 +408,7 @@
       }
 
       function toggleLessonEnrollment(lessonTitle, lessonElement) {
-        fetch(serverUrl, {
+        fetch("/graphql", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
