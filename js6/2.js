@@ -8,7 +8,6 @@ const {
 } = require("@apollo/server/plugin/drainHttpServer");
 const http = require("http");
 const fetch = require("node-fetch");
-const path = require("path");
 
 const app = express();
 const port = 8124;
@@ -201,7 +200,7 @@ server
     });
 
     router.get("/addLesson", (req, res) => {
-      res.sendFile(path.join(__dirname, "public", "addLesson.html"));
+      res.sendFile("addLessons.html", { root: "./js6/public" });
     });
 
     // Mount the router to the app
