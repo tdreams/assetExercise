@@ -8,6 +8,7 @@ const {
 } = require("@apollo/server/plugin/drainHttpServer");
 const http = require("http");
 const fetch = require("node-fetch");
+const path = require("path");
 
 const app = express();
 const port = 8124;
@@ -19,7 +20,7 @@ app.use(express.static("public"));
 const router = express.Router();
 
 // Setup session middleware
-app.use(
+router.use(
   session({
     secret: "gotcha-secret",
     resave: false,
@@ -182,35 +183,26 @@ const server = new ApolloServer({
   plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
 });
 
-// Start Apollo Server
-server
-  .start()
-  .then(() => {
-    // Apply middleware to connect Apollo Server with Express
-    router.use(
-      "/graphql",
-      expressMiddleware(server, {
-        context: async ({ req }) => ({ req }),
-      })
-    );
+server.start().then(() => {
+  // Apply middleware to connect Apollo Server with Express
+  router.use(
+    "/graphql",
+    expressMiddleware(server, {
+      context: async ({ req }) => ({ req }),
+    })
+  );
+});
 
-    router.get("/addLesson", (req, res) => {
-      res.sendFile("addLessons.html", { root: "./js6/public" });
-    });
-    router.get("/graphql-test", (req, res) => {
-      res.send("GraphQL router is working");
-    });
+// Serve the addLesson HTML file
+router.get("/addLesson", (req, res) => {
+  res.sendFile("addLessons.html", { root: "./js6/public" });
+});
 
-    // Mount the router to the app
-    app.use("/", router);
+app.use("/", router);
 
-    // Start the HTTP server
-    httpServer.listen(port, () => {
-      console.log(`Server running on http://localhost:${port}/graphql`);
-    });
-  })
-  .catch((err) => {
-    console.error("Error starting Apollo Server:", err);
-  });
+// Start the HTTP server
+httpServer.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}/graphql`);
+});
 
 module.exports = router;
