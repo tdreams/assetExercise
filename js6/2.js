@@ -187,7 +187,7 @@ server
   .start()
   .then(() => {
     // Apply middleware to connect Apollo Server with Express
-    app.use(
+    router.use(
       "/graphql",
       expressMiddleware(server, {
         context: async ({ req }) => ({ req }),
