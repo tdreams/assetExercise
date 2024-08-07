@@ -11,7 +11,7 @@ const fetch = require("node-fetch");
 const path = require("path");
 
 const app = express();
-const port = 8124;
+const port = process.env.PORT || 8124;
 
 app.use(cors());
 app.use(express.json());
@@ -195,8 +195,13 @@ server
       })
     );
 
+    // Define routes in the router
+    router.use("/", (req, res, next) => {
+      next();
+    });
+
     router.get("/addLesson", (req, res) => {
-      res.sendFile("addLessons.html", { root: "./js6/public" });
+      res.sendFile(path.join(__dirname, "public", "addLesson.html"));
     });
 
     // Mount the router to the app

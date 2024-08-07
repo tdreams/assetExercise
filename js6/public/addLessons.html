@@ -134,6 +134,7 @@
       const notEnrolledDiv = document.querySelector(".not-enrolled");
       const enrolledDiv = document.querySelector(".enrolled");
 
+      const serverUrl = "https://assetexercise.onrender.com/graphql";
       document.addEventListener("DOMContentLoaded", () => {
         checkUserSession();
       });
@@ -151,7 +152,7 @@
       }
 
       function checkUserSession() {
-        fetch(`/graphql`, {
+        fetch(serverUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -212,7 +213,7 @@
             clickHandler();
             return;
           }
-          fetch(`/graphql`, {
+          fetch(serverUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -250,7 +251,7 @@
       }
 
       function fetchPokemonDetails(name) {
-        fetch(`/graphql`, {
+        fetch(serverUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -303,7 +304,7 @@
       }
 
       function loginPokemon(name) {
-        return fetch(`/graphql`, {
+        return fetch(serverUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -348,7 +349,7 @@
       }
 
       function fetchLessons(userLessons = []) {
-        fetch(`/graphql`, {
+        fetch(serverUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -404,7 +405,7 @@
       }
 
       function toggleLessonEnrollment(lessonTitle, lessonElement) {
-        fetch(`/graphql`, {
+        fetch(serverUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
