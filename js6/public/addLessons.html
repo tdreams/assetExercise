@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome</title>
+    <style>
+      body {
+        background-color: black;
+        color: white;
+      }
+      .container {
+        padding: 20px;
+      }
+      h3 {
+        font-size: 32px;
+        font-weight: bolder;
+      }
+      .pokemonInput {
+        width: 100%;
+        height: 30px;
+        border: 1px solid white;
+        background-color: transparent;
+        border-radius: 6px;
+        color: white;
+      }
+      .result {
+        margin: 10px;
+      }
+      .pokemonDetails {
+        display: flex;
+        flex-direction: column;
+      }
+      .filteredName {
+        font-size: 24px;
+        border-bottom: 0.4px solid white;
+        cursor: pointer;
+      }
+      .pokemonDetailName {
+        font-size: 28px;
+        font-weight: bolder;
+      }
+      .divRow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .loginBtn {
+        padding: 10px;
+        height: auto;
+        border: 1px solid white;
+        color: black;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .loginBtn:hover {
+        color: white;
+        background-color: black;
+      }
+      .img-pokemon {
+        position: relative;
+        margin: auto;
+        width: 400px;
+        height: 400px;
+      }
+      .img-pokemon img {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        z-index: 1;
+      }
+      .frame {
+        border: 10px solid rgba(255, 255, 255, 0.135);
+        width: 300px;
+        height: 300px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 0;
+        rotate: 10deg;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0) 70%
+        );
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5),
+          0 0 20px rgba(255, 255, 255, 0.3);
+      }
+      .search {
+        display: flex;
+        flex-direction: column;
+      }
+      .lessons {
+        margin-top: 20px;
+      }
+      .lesson {
+        cursor: pointer;
+        padding: 5px;
+        border: 1px solid white;
+        margin-bottom: 5px;
+        border-radius: 6px;
+      }
+      .enrolled,
+      .not-enrolled {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="search">
+        <h3>Pokemon Search</h3>
+        <input class="pokemonInput" type="text" />
+      </div>
+
+      <div class="result"></div>
+      <div class="pokemonDetails"></div>
+      <div class="lessons">
+        <div class="not-enrolled">
+          <h3>Not Enrolled</h3>
+        </div>
+        <div class="enrolled">
+          <h3>Enrolled</h3>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const searchCache = {}; // Corrected typo
+      const searchDiv = document.querySelector(".search");
+      const resultDiv = document.querySelector(".result");
+      const pokemonDetailsDiv = document.querySelector(".pokemonDetails");
+      const notEnrolledDiv = document.querySelector(".not-enrolled");
+      const enrolledDiv = document.querySelector(".enrolled");
+
+      document.addEventListener("DOMContentLoaded", () => {
+        checkUserSession();
+      });
+
+      function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func.apply(this, args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      function checkUserSession() {
+        fetch(`/graphql`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+          query {
+            user {
+              id
+              pokemon {
+                name
+                image
+              }
+              image
+              lessons {
+                title
+              }
+            }
+          }
+        `,
+          }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            return resp.json();
+          })
+          .then((result) => {
+            const user = result.data.user;
+            if (user) {
+              console.log("User session found:", user);
+              updateUIWithUser(user);
+              fetchLessons(user.lessons);
+            } else {
+              console.log("No user session found.");
+            }
+          })
+          .catch((err) => console.log("Error checking user session", err));
+      }
+
+      function updateUIWithUser(user) {
+        searchDiv.style.display = "none";
+        pokemonDetailsDiv.innerHTML = `<div class="divRow">
+        <p class ="pokemonDetailName">${user.pokemon.name}</p>
+      </div>
+      <div class="img-pokemon">
+        <img src="${user.image}" alt="${user.pokemon.name}">
+        <div class="frame"></div>
+      </div>`;
+      }
+
+      function searchPokemon(query) {
+        if (query) {
+          if (searchCache[query]) {
+            console.log("Using Caching result for:", query);
+            resultDiv.innerHTML = searchCache[query];
+            clickHandler();
+            return;
+          }
+          fetch(`/graphql`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              query: `
+            query searchPokemon($str: String!) {
+              search(str: $str) {
+                concatenatedNames
+              }
+            }
+          `,
+              variables: {
+                str: query,
+              },
+            }),
+          })
+            .then((resp) => {
+              if (!resp.ok) {
+                throw new Error(`HTTP error! status: ${resp.status}`);
+              }
+              return resp.json();
+            })
+            .then((result) => {
+              const data = result.data.search.concatenatedNames;
+              console.log(data);
+              searchCache[query] = data; // Cache the result
+              resultDiv.innerHTML = data;
+              clickHandler();
+            })
+            .catch((err) => console.log("Error fetching pokemon", err));
+        } else {
+          resultDiv.innerHTML = "";
+        }
+      }
+
+      function fetchPokemonDetails(name) {
+        fetch(`/graphql`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+          query getPokemonDetails($name: String!) {
+            pokemon(name: $name) {
+              name
+              image
+            }
+          }
+        `,
+            variables: {
+              name: name,
+            },
+          }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            return resp.json();
+          })
+          .then((result) => {
+            const data = result.data.pokemon;
+            console.log(data);
+            resultDiv.innerHTML = "";
+            pokemonDetailsDiv.innerHTML = `<div class="divRow">
+            <p class ="pokemonDetailName">${data.name}</p>
+            <button class = "loginBtn" onclick="loginPokemon('${data.name}')">
+            Login</button>
+          </div>
+          <div class="img-pokemon">
+            <img src="${data.image}" alt="${data.name}">
+            <div class="frame"></div>
+          </div>`;
+          })
+          .catch((err) => console.log("Error fetching pokemon details", err));
+      }
+
+      function clickHandler() {
+        const filteredNames = document.querySelectorAll(".filteredName");
+        filteredNames.forEach((nameElement) => {
+          nameElement.addEventListener("click", () => {
+            const name = nameElement.dataset.name;
+            fetchPokemonDetails(name);
+          });
+        });
+      }
+
+      function loginPokemon(name) {
+        return fetch(`/graphql`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+          mutation login($pokemon: String!) {
+            login(pokemon: $pokemon) {
+              user {
+                id
+                pokemon {
+                  name
+                  image
+                }
+                image
+                lessons {
+                  title
+                }
+              }
+            }
+          }
+        `,
+            variables: {
+              pokemon: name,
+            },
+          }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            return resp.json();
+          })
+          .then((result) => {
+            const user = result.data.login.user;
+            console.log("Logged in as:", user);
+            // Update UI to show user logged in state
+            updateUIWithUser(user);
+            fetchLessons(user.lessons);
+          })
+          .catch((err) => console.log("Error logging in", err));
+      }
+
+      function fetchLessons(userLessons = []) {
+        fetch(`/graphql`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+          query {
+            lessons(title: "") {
+              title
+            }
+          }
+        `,
+          }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            return resp.json();
+          })
+          .then((result) => {
+            const lessons = result.data.lessons;
+            console.log("Lessons:", lessons);
+            displayLessons(lessons, userLessons);
+          })
+          .catch((err) => console.log("Error fetching lessons", err));
+      }
+
+      function displayLessons(lessons, userLessons) {
+        const enrolledLessons = new Set(
+          userLessons.reduce((acc, lesson) => {
+            acc.push(lesson.title);
+            return acc;
+          }, [])
+        );
+
+        notEnrolledDiv.innerHTML = "<h3>Not Enrolled</h3>";
+        enrolledDiv.innerHTML = "<h3>Enrolled</h3>";
+
+        lessons.forEach((lesson) => {
+          const lessonElement = document.createElement("div");
+          lessonElement.className = "lesson";
+          lessonElement.innerText = lesson.title;
+          lessonElement.onclick = () =>
+            toggleLessonEnrollment(lesson.title, lessonElement);
+
+          if (enrolledLessons.has(lesson.title)) {
+            enrolledDiv.appendChild(lessonElement);
+          } else {
+            notEnrolledDiv.appendChild(lessonElement);
+          }
+        });
+      }
+
+      function toggleLessonEnrollment(lessonTitle, lessonElement) {
+        fetch(`/graphql`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+          mutation toggleLessonEnrollment($lessonTitle: String!) {
+            toggleLessonEnrollment(lessonTitle: $lessonTitle) {
+              lessons {
+                title
+              }
+            }
+          }
+        `,
+            variables: {
+              lessonTitle: lessonTitle,
+            },
+          }),
+        })
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            return resp.json();
+          })
+          .then((result) => {
+            const user = result.data.toggleLessonEnrollment;
+            console.log("Updated lessons:", user.lessons);
+            // Refresh the entire lesson list
+            // fetchLessons(user.lessons);
+
+            const enrolledLessons = new Set(
+              user.lessons.reduce((acc, lesson) => {
+                acc.push(lesson.title);
+                return acc;
+              }, [])
+            );
+
+            // Remove the element from the current category
+            if (lessonElement.parentNode === notEnrolledDiv) {
+              notEnrolledDiv.removeChild(lessonElement);
+              enrolledDiv.appendChild(lessonElement);
+            } else {
+              enrolledDiv.removeChild(lessonElement);
+              notEnrolledDiv.appendChild(lessonElement);
+            }
+          })
+          .catch((err) => console.log("Error toggling lesson enrollment", err));
+      }
+
+      const debouncedFetchPokemon = debounce(searchPokemon, 400);
+
+      document.querySelector(".pokemonInput").addEventListener("input", (e) => {
+        const query = e.target.value;
+        pokemonDetailsDiv.innerHTML = "";
+        debouncedFetchPokemon(query);
+      });
+    </script>
+  </body>
+</html>
