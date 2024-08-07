@@ -12,6 +12,7 @@ const allowedOrigins = [
   "http://localhost:3200",
   "https://assetexercise.onrender.com",
   "https://assetexercise.onrender.com/chatroom",
+  "https://assetexercise.onrender.com/graphql",
 ];
 const corsOptions = {
   origin: (origin, callback) => {
