@@ -57,7 +57,7 @@ const js59Router = require("./js5/9"); // Adjust the path as necessary
 app.use(js59Router);
 
 const js62Router = require("./js6/2"); // Adjust the path as necessary
-app.use(js62Router);
+app.use("/", js62Router);
 
 const port = process.env.PORT || 8123;
 app.listen(port, () => {

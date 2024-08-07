@@ -194,13 +194,11 @@ server
       })
     );
 
-    // Define routes in the router
-    router.use("/", (req, res, next) => {
-      next();
-    });
-
     router.get("/addLesson", (req, res) => {
       res.sendFile("addLessons.html", { root: "./js6/public" });
+    });
+    router.get("/graphql-test", (req, res) => {
+      res.send("GraphQL router is working");
     });
 
     // Mount the router to the app
